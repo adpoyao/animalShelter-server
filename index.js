@@ -4,9 +4,80 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 
+const Queue = require ('./queue');
 const {PORT, CLIENT_ORIGIN} = require('./config');
 const {dbConnect} = require('./db-mongoose');
 // const {dbConnect} = require('./db-knex');
+
+//START: ANIMAL DATABASE: QUEUE
+
+function growQueue(animals, shelter){
+  for(let i=0; i<animals.length; i++){
+    shelter.enqueue(animals[i]);
+  }
+}
+
+const catShelter = new Queue();
+const dogShelter = new Queue();
+
+let cats = [{
+  imageURL:'https://assets3.thrillist.com/v1/image/2622128/size/tmg-slideshow_l.jpg',
+  imageDescription: 'Orange bengal cat with black stripes lounging on concrete.',
+  name: 'Fluffy',
+  sex: 'Female',
+  age: 2,
+  breed: 'Bengal',
+  story: 'Thrown on the street'
+}, 
+{
+  imageURL:'http://www.briarwoodanimalhospital.com/wp-content/uploads/sites/28/2016/08/hairballcats.jpg',
+  imageDescription: 'Gray cat lying on its back with crown of head on the floor, looking back.',
+  name: 'Belly Button',
+  sex: 'Male',
+  age: 3,
+  breed: 'Mutt',
+  story: 'A cat who loves to lie on his back with a tummy itching for a rubbing.'
+},
+{imageURL:'https://data.whicdn.com/images/15566661/original.jpg',
+  imageDescription: 'Orange bengal cat with black stripes lounging on concrete.',
+  name: 'Agnes',
+  sex: 'Female',
+  age: 1,
+  breed: 'Mutt',
+  story: 'Perfect crazy cat lady starter kit'
+}];
+
+let dogs = [{
+  imageURL: 'http://www.dogster.com/wp-content/uploads/2015/05/Cute%20dog%20listening%20to%20music%201_1.jpg',
+  imageDescription: 'A smiling golden-brown golden retreiver listening to music.',
+  name: 'Zeus',
+  sex: 'Male',
+  age: 3,
+  breed: 'Golden Retriever',
+  story: 'Owner Passed away'
+},
+{
+  imageURL: 'http://images6.fanpop.com/image/photos/33500000/Cute-Dog-dogs-33531442-450-475.jpg',
+  imageDescription: 'A brown puppy covered in snow powder.',
+  name: 'Chione',
+  sex: 'Male',
+  age: 1,
+  breed: 'Retriever',
+  story: 'Lost its wintry home due to global warming'
+},
+{
+  imageURL: 'https://1funny.com/wp-content/uploads/2011/03/dog-mail.jpg',
+  imageDescription: 'A small, indoor terrier with chewed up mails and mail shreds trailing from front door\'s mail slot.',
+  name: 'Mercury',
+  sex: 'Male',
+  age: 4,
+  breed: 'Terrier',
+  story: 'Loves to deliver (and destroy) your daily mails!'
+}];
+
+growQueue(cats, catShelter);
+growQueue(dogs, dogShelter);
+//END OF ANIMAL DATABASE: QUEUE
 
 const app = express();
 
@@ -21,6 +92,28 @@ app.use(
     origin: CLIENT_ORIGIN
   })
 );
+
+app.get('/api/cat', (req, res) => {
+  const nextCat = catShelter.peek();
+  res.status(200).json(nextCat);
+});
+
+app.get('/api/dog', (req, res) => {
+  const nextDog = dogShelter.peek();
+  res.status(200).json(nextDog);
+});
+
+app.delete('/api/cat', (req, res) => {
+  const nextCat = catShelter.dequeue();
+  catShelter.enqueue(nextCat);
+  res.status(204).end();
+});
+
+app.delete('/api/dog', (req, res) => {
+  const nextDog = dogShelter.dequeue();
+  dogShelter.enqueue(nextDog);
+  res.status(204).end();
+});
 
 function runServer(port = PORT) {
   const server = app
